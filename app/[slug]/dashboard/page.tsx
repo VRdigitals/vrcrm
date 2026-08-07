@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { requireClientSession } from "@/lib/session";
 import { getClientBySlug, getDailyDataForClient } from "@/lib/db";
 import {
-  computeCampaignBreakdown,
+  computeCampaignTables,
   computeDailyTrend,
   computeSummary,
   currentMonthRange,
@@ -19,6 +19,7 @@ import {
 } from "@/app/components/icons";
 import CostPerLeadChart from "./CostPerLeadChart";
 import SpendLeadsChart from "./SpendLeadsChart";
+import CampaignTables from "./CampaignTables";
 
 export default async function DashboardPage({
   params,
@@ -43,13 +44,12 @@ export default async function DashboardPage({
   const { fromDate, toDate } = currentMonthRange();
   const rows = getDailyDataForClient(client.id, { fromDate, toDate });
   const summary = computeSummary(rows);
-  const campaigns = computeCampaignBreakdown(rows);
+  const campaignTables = computeCampaignTables(rows);
   const trend = computeDailyTrend(rows);
   const monthLabel = new Date(`${toDate}T00:00:00Z`).toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
   });
-  const maxCampaignSpend = Math.max(...campaigns.map((c) => c.spend), 1);
 
   return (
     <main className="min-h-screen bg-slate-50">
@@ -127,70 +127,11 @@ export default async function DashboardPage({
           </div>
         </section>
 
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="mt-6">
           <h2 className="mb-4 text-base font-bold text-slate-900">
             Campaign Breakdown
           </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  <th className="py-2 pr-4">Campaign</th>
-                  <th className="py-2 pr-4">Spend</th>
-                  <th className="py-2 pr-4">Leads</th>
-                  <th className="py-2 pr-4">Clicks</th>
-                  <th className="py-2 pr-4">Impressions</th>
-                  <th className="py-2 pr-4">Cost / Lead</th>
-                </tr>
-              </thead>
-              <tbody>
-                {campaigns.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-10 text-center text-slate-400">
-                      No campaign data yet for this month.
-                    </td>
-                  </tr>
-                ) : (
-                  campaigns.map((c) => (
-                    <tr key={c.campaign_name} className="border-b border-slate-100">
-                      <td className="py-3 pr-4">
-                        <div className="font-semibold text-slate-800">
-                          {c.campaign_name}
-                        </div>
-                        <div className="mt-1.5 h-1.5 w-40 overflow-hidden rounded-full bg-slate-100">
-                          <div
-                            className="h-full rounded-full"
-                            style={{
-                              width: `${Math.max(
-                                (c.spend / maxCampaignSpend) * 100,
-                                4
-                              )}%`,
-                              background: "var(--brand-gradient)",
-                            }}
-                          />
-                        </div>
-                      </td>
-                      <td className="py-3 pr-4 font-medium text-slate-700">
-                        {formatCurrency(c.spend)}
-                      </td>
-                      <td className="py-3 pr-4 text-slate-600">
-                        {formatNumber(c.leads)}
-                      </td>
-                      <td className="py-3 pr-4 text-slate-600">
-                        {formatNumber(c.clicks)}
-                      </td>
-                      <td className="py-3 pr-4 text-slate-600">
-                        {formatNumber(c.impressions)}
-                      </td>
-                      <td className="py-3 pr-4 font-medium text-slate-700">
-                        {formatCurrency(c.cost_per_lead)}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          <CampaignTables tables={campaignTables} />
         </section>
       </div>
     </main>
