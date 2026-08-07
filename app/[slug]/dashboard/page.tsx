@@ -1,9 +1,14 @@
 import { redirect } from "next/navigation";
 import { requireClientSession } from "@/lib/session";
-import { getClientBySlug, getDailyDataForClient } from "@/lib/db";
+import {
+  getClientBySlug,
+  getDailyDataForClient,
+  getKnownCampaignNames,
+} from "@/lib/db";
 import {
   computeCampaignTables,
   computeDailyTrend,
+  computeNoDeliveryCampaigns,
   computeSummary,
   currentMonthRange,
   formatCurrency,
@@ -46,6 +51,8 @@ export default async function DashboardPage({
   const summary = computeSummary(rows);
   const campaignTables = computeCampaignTables(rows);
   const trend = computeDailyTrend(rows);
+  const knownCampaigns = getKnownCampaignNames(client.id);
+  const noDeliveryCampaigns = computeNoDeliveryCampaigns(knownCampaigns, campaignTables);
   const monthLabel = new Date(`${toDate}T00:00:00Z`).toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
@@ -132,9 +139,54 @@ export default async function DashboardPage({
             Campaign Breakdown
           </h2>
           <CampaignTables tables={campaignTables} />
+
+          {noDeliveryCampaigns.length > 0 && (
+            <p className="mt-4 text-sm text-slate-400">
+              <span className="font-semibold text-slate-500">
+                No delivery this month:
+              </span>{" "}
+              {noDeliveryCampaigns.join(", ")}
+            </p>
+          )}
+        </section>
+
+        <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="px-6 py-4" style={{ background: "var(--brand-gradient)" }}>
+            <h2 className="text-sm font-bold text-white">
+              Account Total — {monthLabel} (MTD)
+            </h2>
+          </div>
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 p-6 sm:grid-cols-4">
+            <AccountTotalStat label="Total Spend" value={formatCurrency(summary.totalSpend)} />
+            <AccountTotalStat label="Total Leads" value={formatNumber(summary.totalLeads)} />
+            <AccountTotalStat label="Total Clicks" value={formatNumber(summary.totalClicks)} />
+            <AccountTotalStat label="Total Reach" value={formatNumber(summary.totalReach)} />
+            <AccountTotalStat
+              label="Total Impressions"
+              value={formatNumber(summary.totalImpressions)}
+            />
+            <AccountTotalStat
+              label="Avg. Cost / Lead"
+              value={formatCurrency(summary.avgCostPerLead)}
+            />
+            <AccountTotalStat label="Avg. CPC" value={formatCurrency(summary.avgCpc)} />
+          </dl>
         </section>
       </div>
     </main>
+  );
+}
+
+function AccountTotalStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+        {label}
+      </dt>
+      <dd className="mt-1 text-xl font-extrabold tracking-tight text-slate-900">
+        {value}
+      </dd>
+    </div>
   );
 }
 

@@ -18,8 +18,15 @@
  *       "reach": 4200,
  *       "cost_per_lead": 24.69   // optional — computed from spend/leads if omitted
  *     }
- *   ]
+ *   ],
+ *   "known_campaigns": ["Lead Gen - Aug", "Paused Campaign With No Spend"]
  * }
+ *
+ * `known_campaigns` is optional but recommended: the FULL campaign roster
+ * for the account (active + paused, regardless of delivery), pulled
+ * without a date filter. It's what lets the dashboard report "no delivery
+ * this month" campaigns — those never get a `rows` entry since we only
+ * write rows for days with actual activity.
  *
  * Usage:
  *   npx tsx scripts/upsert-daily-data.ts path/to/data.json
@@ -27,7 +34,12 @@
  */
 import fs from "fs";
 import { z } from "zod";
-import { db, getClientBySlug, upsertDailyDataRow } from "../lib/db";
+import {
+  db,
+  getClientBySlug,
+  upsertDailyDataRow,
+  upsertKnownCampaign,
+} from "../lib/db";
 
 const RowSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
@@ -43,6 +55,7 @@ const RowSchema = z.object({
 const PayloadSchema = z.object({
   client_slug: z.string().min(1),
   rows: z.array(RowSchema).min(1),
+  known_campaigns: z.array(z.string().min(1)).optional(),
 });
 
 function readInput(): string {
@@ -86,6 +99,12 @@ function main() {
     });
     count++;
   }
+
+  // Always register campaigns that actually delivered, plus the full
+  // roster if the caller supplied one.
+  const rosterNames = new Set(parsed.rows.map((r) => r.campaign_name));
+  for (const name of parsed.known_campaigns ?? []) rosterNames.add(name);
+  for (const name of rosterNames) upsertKnownCampaign(client.id, name);
 
   // This file runs in WAL mode: without a checkpoint, writes land only in
   // app.db-wal (which is gitignored) and `git add data/app.db` would commit

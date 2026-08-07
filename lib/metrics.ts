@@ -5,6 +5,7 @@ export interface SummaryTotals {
   totalLeads: number;
   totalClicks: number;
   totalImpressions: number;
+  totalReach: number;
   avgCostPerLead: number;
   avgCpc: number;
 }
@@ -14,12 +15,14 @@ export function computeSummary(rows: DailyDataRow[]): SummaryTotals {
   const totalLeads = rows.reduce((sum, r) => sum + r.leads, 0);
   const totalClicks = rows.reduce((sum, r) => sum + r.clicks, 0);
   const totalImpressions = rows.reduce((sum, r) => sum + r.impressions, 0);
+  const totalReach = rows.reduce((sum, r) => sum + r.reach, 0);
 
   return {
     totalSpend,
     totalLeads,
     totalClicks,
     totalImpressions,
+    totalReach,
     avgCostPerLead: totalLeads > 0 ? totalSpend / totalLeads : 0,
     avgCpc: totalClicks > 0 ? totalSpend / totalClicks : 0,
   };
@@ -133,6 +136,19 @@ export function computeCampaignTables(rows: DailyDataRow[]): CampaignTable[] {
   });
 
   return tables.sort((a, b) => b.totals.spend - a.totals.spend);
+}
+
+/**
+ * Campaigns known to exist on the account (from the full roster pulled
+ * alongside insights) that had no daily_data rows this period — i.e. no
+ * delivery at all, not just zero leads.
+ */
+export function computeNoDeliveryCampaigns(
+  knownCampaignNames: string[],
+  tables: CampaignTable[]
+): string[] {
+  const withData = new Set(tables.map((t) => t.campaign_name));
+  return knownCampaignNames.filter((name) => !withData.has(name)).sort();
 }
 
 export interface DailyTrendPoint {

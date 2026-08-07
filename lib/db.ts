@@ -51,6 +51,16 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_daily_data_client_date ON daily_data(client_id, date);
+
+  -- Full campaign roster per client, independent of whether a campaign had
+  -- any spend on a given day. Needed to report "no delivery this month"
+  -- campaigns, since daily_data only ever gets rows for active delivery.
+  CREATE TABLE IF NOT EXISTS campaigns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    campaign_name TEXT NOT NULL,
+    UNIQUE(client_id, campaign_name)
+  );
 `);
 
 export type Role = "client" | "team";
@@ -154,6 +164,21 @@ export function getAllDailyData(opts?: {
     client_slug: string;
     display_name: string;
   })[];
+}
+
+export function getKnownCampaignNames(clientId: number): string[] {
+  const rows = db
+    .prepare(`SELECT campaign_name FROM campaigns WHERE client_id = ?`)
+    .all(clientId) as { campaign_name: string }[];
+  return rows.map((r) => r.campaign_name);
+}
+
+export function upsertKnownCampaign(clientId: number, campaignName: string): void {
+  db.prepare(
+    `INSERT INTO campaigns (client_id, campaign_name)
+     VALUES (?, ?)
+     ON CONFLICT(client_id, campaign_name) DO NOTHING`
+  ).run(clientId, campaignName);
 }
 
 export function upsertClient(input: {
