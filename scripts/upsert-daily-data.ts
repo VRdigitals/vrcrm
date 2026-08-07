@@ -27,7 +27,7 @@
  */
 import fs from "fs";
 import { z } from "zod";
-import { getClientBySlug, upsertDailyDataRow } from "../lib/db";
+import { db, getClientBySlug, upsertDailyDataRow } from "../lib/db";
 
 const RowSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
@@ -86,6 +86,11 @@ function main() {
     });
     count++;
   }
+
+  // This file runs in WAL mode: without a checkpoint, writes land only in
+  // app.db-wal (which is gitignored) and `git add data/app.db` would commit
+  // no change at all. Force the write into the main db file before exiting.
+  db.pragma("wal_checkpoint(TRUNCATE)");
 
   console.log(`Upserted ${count} row(s) for ${parsed.client_slug}.`);
 }
