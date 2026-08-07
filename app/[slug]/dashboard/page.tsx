@@ -14,8 +14,7 @@ import {
   formatCurrency,
   formatNumber,
 } from "@/lib/metrics";
-import { logoutAction } from "@/app/actions/auth";
-import Logo from "@/app/components/Logo";
+import PortalHeader from "@/app/components/PortalHeader";
 import {
   IconCurrency,
   IconUsers,
@@ -60,29 +59,14 @@ export default async function DashboardPage({
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <Logo />
-            <div>
-              <h1 className="text-lg font-extrabold tracking-tight text-slate-900">
-                {client.display_name}
-              </h1>
-              <p className="text-xs font-medium text-slate-400">
-                Meta Ads performance · {monthLabel}
-              </p>
-            </div>
-          </div>
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              className="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium text-slate-500 transition-colors duration-150 hover:bg-slate-100 hover:text-slate-900"
-            >
-              Sign out
-            </button>
-          </form>
-        </div>
-      </header>
+      <PortalHeader
+        title={client.display_name}
+        subtitle={`Meta Ads performance · ${monthLabel}`}
+        nav={[
+          { href: `/${slug}/dashboard`, label: "Dashboard", active: true },
+          { href: `/${slug}/leads`, label: "Leads", active: false },
+        ]}
+      />
 
       <div className="mx-auto max-w-6xl px-6 py-8">
         <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">

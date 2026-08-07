@@ -61,6 +61,31 @@ db.exec(`
     campaign_name TEXT NOT NULL,
     UNIQUE(client_id, campaign_name)
   );
+
+  -- Raw lead records (contains personal data — name, email, phone). Grouped
+  -- by "tab" to mirror the per-campaign sheet tabs in the daily lead-tracking
+  -- spreadsheet clients are used to. The two question columns vary by tab
+  -- (e.g. "when are you planning to join?" vs "current situation in the
+  -- UAE?"), so they're stored generically as label+answer pairs.
+  CREATE TABLE IF NOT EXISTS leads (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    tab_name TEXT NOT NULL,
+    created_time TEXT NOT NULL,
+    platform TEXT,
+    full_name TEXT,
+    email TEXT,
+    phone TEXT,
+    whatsapp_number TEXT,
+    city TEXT,
+    question1_label TEXT,
+    question1_answer TEXT,
+    question2_label TEXT,
+    question2_answer TEXT,
+    UNIQUE(client_id, tab_name, created_time, email, phone)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_leads_client_tab ON leads(client_id, tab_name, created_time);
 `);
 
 export type Role = "client" | "team";
@@ -180,6 +205,101 @@ export function upsertKnownCampaign(clientId: number, campaignName: string): voi
      ON CONFLICT(client_id, campaign_name) DO NOTHING`
   ).run(clientId, campaignName);
 }
+
+export interface LeadRecord {
+  id: number;
+  client_id: number;
+  tab_name: string;
+  created_time: string;
+  platform: string | null;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  whatsapp_number: string | null;
+  city: string | null;
+  question1_label: string | null;
+  question1_answer: string | null;
+  question2_label: string | null;
+  question2_answer: string | null;
+}
+
+export function getLeadTabNames(clientId: number): string[] {
+  const rows = db
+    .prepare(
+      `SELECT DISTINCT tab_name FROM leads WHERE client_id = ? ORDER BY tab_name`
+    )
+    .all(clientId) as { tab_name: string }[];
+  return rows.map((r) => r.tab_name);
+}
+
+export function getLeadsForClient(
+  clientId: number,
+  tabName: string
+): LeadRecord[] {
+  return db
+    .prepare(
+      `SELECT * FROM leads WHERE client_id = ? AND tab_name = ?
+       ORDER BY created_time DESC, id DESC`
+    )
+    .all(clientId, tabName) as LeadRecord[];
+}
+
+export function getLeadCountsByTab(clientId: number): Record<string, number> {
+  const rows = db
+    .prepare(
+      `SELECT tab_name, COUNT(*) as count FROM leads WHERE client_id = ? GROUP BY tab_name`
+    )
+    .all(clientId) as { tab_name: string; count: number }[];
+  return Object.fromEntries(rows.map((r) => [r.tab_name, r.count]));
+}
+
+const upsertLeadStmt = db.prepare(
+  `INSERT INTO leads
+     (client_id, tab_name, created_time, platform, full_name, email, phone,
+      whatsapp_number, city, question1_label, question1_answer,
+      question2_label, question2_answer)
+   VALUES
+     (@client_id, @tab_name, @created_time, @platform, @full_name, @email, @phone,
+      @whatsapp_number, @city, @question1_label, @question1_answer,
+      @question2_label, @question2_answer)
+   ON CONFLICT(client_id, tab_name, created_time, email, phone) DO NOTHING`
+);
+
+export function upsertLead(input: {
+  client_id: number;
+  tab_name: string;
+  created_time: string;
+  platform?: string | null;
+  full_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  whatsapp_number?: string | null;
+  city?: string | null;
+  question1_label?: string | null;
+  question1_answer?: string | null;
+  question2_label?: string | null;
+  question2_answer?: string | null;
+}): void {
+  upsertLeadStmt.run({
+    platform: null,
+    full_name: null,
+    email: null,
+    phone: null,
+    whatsapp_number: null,
+    city: null,
+    question1_label: null,
+    question1_answer: null,
+    question2_label: null,
+    question2_answer: null,
+    ...input,
+  });
+}
+
+export const upsertLeadsBulk = db.transaction(
+  (rows: Parameters<typeof upsertLead>[0][]) => {
+    for (const row of rows) upsertLead(row);
+  }
+);
 
 export function upsertClient(input: {
   client_slug: string;
