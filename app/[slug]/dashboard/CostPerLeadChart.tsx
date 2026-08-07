@@ -1,16 +1,16 @@
 import type { DailyTrendPoint } from "@/lib/metrics";
 
 const WIDTH = 720;
-const HEIGHT = 220;
+const HEIGHT = 240;
 const PAD_LEFT = 48;
 const PAD_RIGHT = 16;
-const PAD_TOP = 16;
+const PAD_TOP = 20;
 const PAD_BOTTOM = 28;
 
 export default function CostPerLeadChart({ data }: { data: DailyTrendPoint[] }) {
   if (data.length === 0) {
     return (
-      <p className="py-12 text-center text-sm text-slate-400">
+      <p className="py-16 text-center text-sm text-slate-400">
         No data yet for this month.
       </p>
     );
@@ -35,7 +35,6 @@ export default function CostPerLeadChart({ data }: { data: DailyTrendPoint[] }) 
     PAD_TOP + plotH
   ).toFixed(1)} L${points[0].x.toFixed(1)},${(PAD_TOP + plotH).toFixed(1)} Z`;
 
-  // Show a subset of x-axis labels so they don't overlap.
   const labelStep = Math.max(1, Math.ceil(data.length / 8));
 
   return (
@@ -45,7 +44,13 @@ export default function CostPerLeadChart({ data }: { data: DailyTrendPoint[] }) 
       role="img"
       aria-label="Cost per lead trend over the month"
     >
-      {/* gridlines */}
+      <defs>
+        <linearGradient id="costPerLeadFill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--brand-cost)" stopOpacity={0.35} />
+          <stop offset="100%" stopColor="var(--brand-cost)" stopOpacity={0} />
+        </linearGradient>
+      </defs>
+
       {[0, 0.25, 0.5, 0.75, 1].map((t) => {
         const y = PAD_TOP + plotH - t * plotH;
         return (
@@ -55,17 +60,32 @@ export default function CostPerLeadChart({ data }: { data: DailyTrendPoint[] }) 
             x2={WIDTH - PAD_RIGHT}
             y1={y}
             y2={y}
-            stroke="#e2e8f0"
+            stroke="#eef2f7"
             strokeWidth={1}
           />
         );
       })}
 
-      <path d={areaPath} fill="#0f172a" fillOpacity={0.06} stroke="none" />
-      <path d={linePath} fill="none" stroke="#0f172a" strokeWidth={2} />
+      <path d={areaPath} fill="url(#costPerLeadFill)" stroke="none" />
+      <path
+        d={linePath}
+        fill="none"
+        stroke="var(--brand-cost)"
+        strokeWidth={3}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
 
       {points.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r={2.5} fill="#0f172a" />
+        <circle
+          key={i}
+          cx={p.x}
+          cy={p.y}
+          r={4}
+          fill="white"
+          stroke="var(--brand-cost)"
+          strokeWidth={2.5}
+        />
       ))}
 
       {points.map((p, i) =>
@@ -74,7 +94,7 @@ export default function CostPerLeadChart({ data }: { data: DailyTrendPoint[] }) 
             key={i}
             x={p.x}
             y={HEIGHT - 8}
-            fontSize={10}
+            fontSize={11}
             fill="#64748b"
             textAnchor="middle"
           >
@@ -83,10 +103,10 @@ export default function CostPerLeadChart({ data }: { data: DailyTrendPoint[] }) 
         ) : null
       )}
 
-      <text x={4} y={PAD_TOP + 4} fontSize={10} fill="#64748b">
+      <text x={4} y={PAD_TOP + 4} fontSize={11} fill="#64748b">
         {maxVal.toFixed(2)}
       </text>
-      <text x={4} y={PAD_TOP + plotH} fontSize={10} fill="#64748b">
+      <text x={4} y={PAD_TOP + plotH} fontSize={11} fill="#64748b">
         0
       </text>
     </svg>
