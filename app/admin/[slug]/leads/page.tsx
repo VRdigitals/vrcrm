@@ -1,10 +1,16 @@
 import { redirect } from "next/navigation";
-import { requireClientAccess } from "@/lib/session";
-import { getLeadTabNames, getLeadsForClient, getLeadCountsByTab } from "@/lib/db";
+import { requireTeamSession } from "@/lib/session";
+import {
+  getAllClients,
+  getClientBySlug,
+  getLeadTabNames,
+  getLeadsForClient,
+  getLeadCountsByTab,
+} from "@/lib/db";
 import PortalHeader from "@/app/components/PortalHeader";
 import LeadsBody from "@/app/components/LeadsBody";
 
-export default async function LeadsPage({
+export default async function AdminLeadsPage({
   params,
   searchParams,
 }: {
@@ -14,12 +20,17 @@ export default async function LeadsPage({
   const { slug } = await params;
   const { tab } = await searchParams;
 
-  const access = await requireClientAccess(slug);
-  if (!access) {
+  const session = await requireTeamSession();
+  if (!session) {
     redirect("/login");
   }
-  const { client, accessibleClients } = access;
 
+  const client = getClientBySlug(slug);
+  if (!client) {
+    redirect("/admin");
+  }
+
+  const allClients = getAllClients();
   const tabNames = getLeadTabNames(client.id);
   const counts = getLeadCountsByTab(client.id);
   const activeTab = tab && tabNames.includes(tab) ? tab : tabNames[0];
@@ -29,19 +40,19 @@ export default async function LeadsPage({
     <main className="min-h-screen bg-slate-50">
       <PortalHeader
         title={client.display_name}
-        subtitle="Leads"
+        subtitle="Leads (Admin)"
         nav={[
-          { href: `/${slug}/dashboard`, label: "Dashboard", active: false },
-          { href: `/${slug}/leads`, label: "Leads", active: true },
+          { href: `/admin/${slug}`, label: "Dashboard", active: false },
+          { href: `/admin/${slug}/leads`, label: "Leads", active: true },
         ]}
-        accounts={accessibleClients.map((c) => ({
-          href: `/${c.client_slug}/leads`,
+        accounts={allClients.map((c) => ({
+          href: `/admin/${c.client_slug}/leads`,
           label: c.display_name,
           active: c.client_slug === slug,
         }))}
       />
       <LeadsBody
-        basePath={`/${slug}/leads`}
+        basePath={`/admin/${slug}/leads`}
         tabNames={tabNames}
         counts={counts}
         activeTab={activeTab}
