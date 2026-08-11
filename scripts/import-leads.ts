@@ -9,7 +9,7 @@
  */
 import fs from "fs";
 import { z } from "zod";
-import { db, getClientBySlug, upsertLeadsBulk } from "../lib/db";
+import { getClientBySlug, upsertLeadsBulk } from "../lib/db";
 
 const LeadSchema = z.object({
   tab_name: z.string().min(1),
@@ -66,7 +66,6 @@ function main() {
   }));
 
   upsertLeadsBulk(rows);
-  db.pragma("wal_checkpoint(TRUNCATE)");
 
   console.log(`Imported ${rows.length} lead rows for ${slug}.`);
 }

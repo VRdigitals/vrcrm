@@ -15,7 +15,14 @@ const globalForDb = globalThis as unknown as { __vrdDb?: Database.Database };
 export const db = globalForDb.__vrdDb ?? new Database(DB_PATH);
 if (process.env.NODE_ENV !== "production") globalForDb.__vrdDb = db;
 
-db.pragma("journal_mode = WAL");
+// Deliberately NOT using WAL mode: it needs to create -wal/-shm sidecar
+// files next to the db on every read, which fails on read-only production
+// filesystems (e.g. Vercel's serverless function bundle is read-only
+// outside /tmp) and crashes every page. Default (DELETE) journal mode only
+// needs write access when an actual write happens, and the deployed app
+// never writes at request time — all writes come from local scripts /
+// the scheduled data-pull routine, which run somewhere with a real
+// writable checkout.
 db.pragma("foreign_keys = ON");
 
 db.exec(`

@@ -15,7 +15,6 @@
  */
 import bcrypt from "bcryptjs";
 import {
-  db,
   upsertClient,
   upsertUser,
   getUserByUsername,
@@ -72,8 +71,6 @@ async function main() {
     role: "team",
     client_id: null,
   });
-
-  db.pragma("wal_checkpoint(TRUNCATE)");
 
   console.log("Seeded tenants: overseas, gcc-countries");
   console.log("Seeded logins: Gokul (overseas + gcc-countries), jayaraj (excellanz), info@vrdigitals.net (team admin)");

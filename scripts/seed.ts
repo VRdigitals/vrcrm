@@ -10,7 +10,7 @@
  *   TEAM_PASSWORD        - login password for the internal VR Digitals team user
  */
 import bcrypt from "bcryptjs";
-import { db, upsertClient, upsertUser, getUserByUsername, grantClientAccess } from "../lib/db";
+import { upsertClient, upsertUser, getUserByUsername, grantClientAccess } from "../lib/db";
 
 function requireEnv(name: string, fallback?: string): string {
   const v = process.env[name] ?? fallback;
@@ -46,9 +46,6 @@ async function main() {
     role: "team",
     client_id: null,
   });
-
-  // WAL mode: checkpoint so `git add data/app.db` actually picks up the write.
-  db.pragma("wal_checkpoint(TRUNCATE)");
 
   console.log(`Seeded client "${client.display_name}" (${client.client_slug})`);
   console.log(`Seeded client login: excellanz`);

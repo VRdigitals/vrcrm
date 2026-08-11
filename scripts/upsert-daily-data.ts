@@ -34,12 +34,7 @@
  */
 import fs from "fs";
 import { z } from "zod";
-import {
-  db,
-  getClientBySlug,
-  upsertDailyDataRow,
-  upsertKnownCampaign,
-} from "../lib/db";
+import { getClientBySlug, upsertDailyDataRow, upsertKnownCampaign } from "../lib/db";
 
 const RowSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
@@ -105,11 +100,6 @@ function main() {
   const rosterNames = new Set(parsed.rows.map((r) => r.campaign_name));
   for (const name of parsed.known_campaigns ?? []) rosterNames.add(name);
   for (const name of rosterNames) upsertKnownCampaign(client.id, name);
-
-  // This file runs in WAL mode: without a checkpoint, writes land only in
-  // app.db-wal (which is gitignored) and `git add data/app.db` would commit
-  // no change at all. Force the write into the main db file before exiting.
-  db.pragma("wal_checkpoint(TRUNCATE)");
 
   console.log(`Upserted ${count} row(s) for ${parsed.client_slug}.`);
 }
