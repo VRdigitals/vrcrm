@@ -2,7 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
-import { getUserByUsername, getClientById } from "@/lib/db";
+import { getUserByUsername, getAccessibleClients } from "@/lib/db";
 import { getSession } from "@/lib/session";
 
 export interface LoginState {
@@ -37,19 +37,11 @@ export async function loginAction(
 
   let destination = "/admin";
   if (user.role === "client") {
-    if (user.client_id == null) {
-      return { error: "This account is not linked to a client. Contact VR Digitals." };
+    const accessibleClients = getAccessibleClients(user.id);
+    if (accessibleClients.length === 0) {
+      return { error: "This account has no ad accounts linked. Contact VR Digitals." };
     }
-    const client = getClientById(user.client_id);
-    if (!client) {
-      return { error: "Client record not found. Contact VR Digitals." };
-    }
-    session.clientId = client.id;
-    session.clientSlug = client.client_slug;
-    destination = `/${client.client_slug}/dashboard`;
-  } else {
-    session.clientId = null;
-    session.clientSlug = null;
+    destination = `/${accessibleClients[0].client_slug}/dashboard`;
   }
 
   await session.save();

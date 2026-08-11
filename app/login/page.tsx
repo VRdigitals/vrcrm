@@ -1,12 +1,16 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
+import { getAccessibleClients } from "@/lib/db";
 import Logo from "@/app/components/Logo";
 import LoginForm from "./LoginForm";
 
 export default async function LoginPage() {
   const session = await getSession();
-  if (session.role === "client" && session.clientSlug) {
-    redirect(`/${session.clientSlug}/dashboard`);
+  if (session.role === "client" && session.userId != null) {
+    const accessibleClients = getAccessibleClients(session.userId);
+    if (accessibleClients.length > 0) {
+      redirect(`/${accessibleClients[0].client_slug}/dashboard`);
+    }
   }
   if (session.role === "team") {
     redirect("/admin");

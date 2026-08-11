@@ -2,14 +2,12 @@ import "server-only";
 import { cookies } from "next/headers";
 import { getIronSession, type IronSession, type SessionOptions } from "iron-session";
 import type { Role } from "./db";
+import { getAccessibleClients } from "./db";
 
 export interface SessionData {
   userId?: number;
   username?: string;
   role?: Role;
-  /** null for team users, the owning client's id for client users */
-  clientId?: number | null;
-  clientSlug?: string | null;
 }
 
 function getSecret(): string {
@@ -40,17 +38,25 @@ export async function getSession(): Promise<IronSession<SessionData>> {
   });
 }
 
-/** Returns the session only if it belongs to a client user scoped to `slug`. */
-export async function requireClientSession(slug: string) {
+/**
+ * Returns the session plus the requested client + the full list of clients
+ * this user can switch between (for the account-tab UI), but ONLY if the
+ * session's user actually has access to `slug`. A client-role login may
+ * have access to more than one ad-account tenant (agency staff covering
+ * several accounts) — access is always checked against the user_clients
+ * join table server-side, never trusted from the URL.
+ */
+export async function requireClientAccess(slug: string) {
   const session = await getSession();
-  if (
-    session.role === "client" &&
-    session.clientSlug === slug &&
-    session.clientId != null
-  ) {
-    return session;
+  if (session.role !== "client" || session.userId == null) {
+    return null;
   }
-  return null;
+  const accessibleClients = getAccessibleClients(session.userId);
+  const client = accessibleClients.find((c) => c.client_slug === slug);
+  if (!client) {
+    return null;
+  }
+  return { session, client, accessibleClients };
 }
 
 /** Returns the session only if it belongs to an internal team user. */

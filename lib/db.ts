@@ -86,6 +86,17 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_leads_client_tab ON leads(client_id, tab_name, created_time);
+
+  -- Many-to-many: a client-role login can see more than one ad-account
+  -- tenant (e.g. an agency staff member covering several accounts), shown
+  -- as switchable tabs. users.client_id is kept as a legacy single-client
+  -- pointer but access checks go through this table.
+  CREATE TABLE IF NOT EXISTS user_clients (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    UNIQUE(user_id, client_id)
+  );
 `);
 
 export type Role = "client" | "team";
@@ -318,6 +329,26 @@ export function upsertClient(input: {
     meta_ad_account_id: input.meta_ad_account_id ?? null,
   });
   return getClientBySlug(input.client_slug)!;
+}
+
+/** All ad-account tenants a given user is allowed to see, for tab-switching. */
+export function getAccessibleClients(userId: number): ClientRecord[] {
+  return db
+    .prepare(
+      `SELECT c.* FROM clients c
+       JOIN user_clients uc ON uc.client_id = c.id
+       WHERE uc.user_id = ?
+       ORDER BY c.display_name`
+    )
+    .all(userId) as ClientRecord[];
+}
+
+export function grantClientAccess(userId: number, clientId: number): void {
+  db.prepare(
+    `INSERT INTO user_clients (user_id, client_id)
+     VALUES (?, ?)
+     ON CONFLICT(user_id, client_id) DO NOTHING`
+  ).run(userId, clientId);
 }
 
 export function upsertUser(input: {

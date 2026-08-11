@@ -10,7 +10,7 @@
  *   TEAM_PASSWORD        - login password for the internal VR Digitals team user
  */
 import bcrypt from "bcryptjs";
-import { db, upsertClient, upsertUser } from "../lib/db";
+import { db, upsertClient, upsertUser, getUserByUsername, grantClientAccess } from "../lib/db";
 
 function requireEnv(name: string, fallback?: string): string {
   const v = process.env[name] ?? fallback;
@@ -38,6 +38,7 @@ async function main() {
     role: "client",
     client_id: client.id,
   });
+  grantClientAccess(getUserByUsername("excellanz")!.id, client.id);
 
   upsertUser({
     username: "vrdigitals-team",

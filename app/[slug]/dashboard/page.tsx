@@ -1,10 +1,6 @@
 import { redirect } from "next/navigation";
-import { requireClientSession } from "@/lib/session";
-import {
-  getClientBySlug,
-  getDailyDataForClient,
-  getKnownCampaignNames,
-} from "@/lib/db";
+import { requireClientAccess } from "@/lib/session";
+import { getDailyDataForClient, getKnownCampaignNames } from "@/lib/db";
 import {
   computeCampaignTables,
   computeDailyTrend,
@@ -33,17 +29,13 @@ export default async function DashboardPage({
   const { slug } = await params;
 
   // Data-access is scoped by the authenticated session, not by the URL param:
-  // a session for a different client (or no session) is refused here even
+  // a session without access to this specific client is refused here even
   // though `slug` in the URL could be anything.
-  const session = await requireClientSession(slug);
-  if (!session) {
+  const access = await requireClientAccess(slug);
+  if (!access) {
     redirect("/login");
   }
-
-  const client = getClientBySlug(slug);
-  if (!client) {
-    redirect("/login");
-  }
+  const { client, accessibleClients } = access;
 
   const { fromDate, toDate } = currentMonthRange();
   const rows = getDailyDataForClient(client.id, { fromDate, toDate });
@@ -66,6 +58,11 @@ export default async function DashboardPage({
           { href: `/${slug}/dashboard`, label: "Dashboard", active: true },
           { href: `/${slug}/leads`, label: "Leads", active: false },
         ]}
+        accounts={accessibleClients.map((c) => ({
+          href: `/${c.client_slug}/dashboard`,
+          label: c.display_name,
+          active: c.client_slug === slug,
+        }))}
       />
 
       <div className="mx-auto max-w-6xl px-6 py-8">

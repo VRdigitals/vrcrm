@@ -1,12 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { requireClientSession } from "@/lib/session";
-import {
-  getClientBySlug,
-  getLeadTabNames,
-  getLeadsForClient,
-  getLeadCountsByTab,
-} from "@/lib/db";
+import { requireClientAccess } from "@/lib/session";
+import { getLeadTabNames, getLeadsForClient, getLeadCountsByTab } from "@/lib/db";
 import PortalHeader from "@/app/components/PortalHeader";
 
 export default async function LeadsPage({
@@ -19,15 +14,11 @@ export default async function LeadsPage({
   const { slug } = await params;
   const { tab } = await searchParams;
 
-  const session = await requireClientSession(slug);
-  if (!session) {
+  const access = await requireClientAccess(slug);
+  if (!access) {
     redirect("/login");
   }
-
-  const client = getClientBySlug(slug);
-  if (!client) {
-    redirect("/login");
-  }
+  const { client, accessibleClients } = access;
 
   const tabNames = getLeadTabNames(client.id);
   const counts = getLeadCountsByTab(client.id);
@@ -46,6 +37,11 @@ export default async function LeadsPage({
           { href: `/${slug}/dashboard`, label: "Dashboard", active: false },
           { href: `/${slug}/leads`, label: "Leads", active: true },
         ]}
+        accounts={accessibleClients.map((c) => ({
+          href: `/${c.client_slug}/leads`,
+          label: c.display_name,
+          active: c.client_slug === slug,
+        }))}
       />
 
       <div className="mx-auto max-w-6xl px-6 py-8">
