@@ -12,19 +12,35 @@ if (!fs.existsSync(DATA_DIR)) {
 // Reuse a single connection across hot reloads in dev.
 const globalForDb = globalThis as unknown as { __vrdDb?: Database.Database };
 
-export const db = globalForDb.__vrdDb ?? new Database(DB_PATH);
+// better-sqlite3 opens read-write by default, which fails outright on a
+// read-only filesystem (Vercel's deployed function bundle is read-only
+// outside /tmp) — not just WAL's sidecar files, the plain open() call
+// itself throws SQLITE_CANTOPEN. Try read-write first (needed by local
+// scripts that seed/import data); fall back to read-only, which the
+// deployed app only ever needs since it never writes at request time —
+// all writes come from local scripts / the scheduled data-pull routine,
+// which run somewhere with a real writable checkout.
+let writable = true;
+let dbInstance: Database.Database;
+if (globalForDb.__vrdDb) {
+  dbInstance = globalForDb.__vrdDb;
+} else {
+  try {
+    dbInstance = new Database(DB_PATH);
+  } catch {
+    dbInstance = new Database(DB_PATH, { readonly: true, fileMustExist: true });
+    writable = false;
+  }
+}
+export const db = dbInstance;
 if (process.env.NODE_ENV !== "production") globalForDb.__vrdDb = db;
 
-// Deliberately NOT using WAL mode: it needs to create -wal/-shm sidecar
-// files next to the db on every read, which fails on read-only production
-// filesystems (e.g. Vercel's serverless function bundle is read-only
-// outside /tmp) and crashes every page. Default (DELETE) journal mode only
-// needs write access when an actual write happens, and the deployed app
-// never writes at request time — all writes come from local scripts /
-// the scheduled data-pull routine, which run somewhere with a real
-// writable checkout.
 db.pragma("foreign_keys = ON");
 
+// Schema creation needs write access — skip it entirely in read-only mode
+// (the deployed app), since the schema is only ever created/migrated by
+// whichever writable process last touched the file.
+if (writable) {
 db.exec(`
   CREATE TABLE IF NOT EXISTS clients (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -105,6 +121,7 @@ db.exec(`
     UNIQUE(user_id, client_id)
   );
 `);
+}
 
 export type Role = "client" | "team";
 
