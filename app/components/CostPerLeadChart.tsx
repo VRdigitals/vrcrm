@@ -12,7 +12,7 @@ export default function CostPerLeadChart({ data }: { data: DailyTrendPoint[] }) 
   if (data.length === 0) {
     return (
       <p className="py-16 text-center text-sm text-slate-400">
-        No data yet for this month.
+        No data yet for this week.
       </p>
     );
   }

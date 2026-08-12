@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireClientAccess } from "@/lib/session";
 import { getDailyDataForClient, getKnownCampaignNames } from "@/lib/db";
-import { currentMonthRange } from "@/lib/metrics";
+import { currentWeekRange, formatWeekLabel } from "@/lib/metrics";
 import PortalHeader from "@/app/components/PortalHeader";
 import DashboardBody from "@/app/components/DashboardBody";
 
@@ -21,19 +21,16 @@ export default async function DashboardPage({
   }
   const { client, accessibleClients } = access;
 
-  const { fromDate, toDate } = currentMonthRange();
+  const { fromDate, toDate } = currentWeekRange();
   const rows = getDailyDataForClient(client.id, { fromDate, toDate });
   const knownCampaigns = getKnownCampaignNames(client.id);
-  const monthLabel = new Date(`${toDate}T00:00:00Z`).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+  const weekLabel = formatWeekLabel(fromDate, toDate);
 
   return (
     <main className="min-h-screen bg-slate-50">
       <PortalHeader
         title={client.display_name}
-        subtitle={`Meta Ads performance · ${monthLabel}`}
+        subtitle={`Meta Ads performance · ${weekLabel}`}
         nav={[
           { href: `/${slug}/dashboard`, label: "Dashboard", active: true },
           { href: `/${slug}/leads`, label: "Leads", active: false },
@@ -44,7 +41,12 @@ export default async function DashboardPage({
           active: c.client_slug === slug,
         }))}
       />
-      <DashboardBody rows={rows} knownCampaigns={knownCampaigns} monthLabel={monthLabel} />
+      <DashboardBody
+        rows={rows}
+        knownCampaigns={knownCampaigns}
+        weekLabel={weekLabel}
+        reportHref={`/api/report/${slug}`}
+      />
     </main>
   );
 }

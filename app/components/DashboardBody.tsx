@@ -7,7 +7,7 @@ import {
   formatNumber,
 } from "@/lib/metrics";
 import type { DailyDataRow } from "@/lib/db";
-import { IconCurrency, IconUsers, IconTag, IconCursorClick } from "./icons";
+import { IconCurrency, IconUsers, IconTag, IconCursorClick, IconDownload } from "./icons";
 import CostPerLeadChart from "./CostPerLeadChart";
 import SpendLeadsChart from "./SpendLeadsChart";
 import CampaignTables from "./CampaignTables";
@@ -21,11 +21,13 @@ import CampaignTables from "./CampaignTables";
 export default function DashboardBody({
   rows,
   knownCampaigns,
-  monthLabel,
+  weekLabel,
+  reportHref,
 }: {
   rows: DailyDataRow[];
   knownCampaigns: string[];
-  monthLabel: string;
+  weekLabel: string;
+  reportHref: string;
 }) {
   const summary = computeSummary(rows);
   const campaignTables = computeCampaignTables(rows);
@@ -68,24 +70,34 @@ export default function DashboardBody({
       <section className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-5">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-3">
           <h2 className="mb-1 text-base font-bold text-slate-900">Spend vs. Leads</h2>
-          <p className="mb-4 text-xs text-slate-400">Daily breakdown this month</p>
+          <p className="mb-4 text-xs text-slate-400">Daily breakdown this week</p>
           <SpendLeadsChart data={trend} />
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:col-span-2">
           <h2 className="mb-1 text-base font-bold text-slate-900">Cost per Lead</h2>
-          <p className="mb-4 text-xs text-slate-400">Daily trend this month</p>
+          <p className="mb-4 text-xs text-slate-400">Daily trend this week</p>
           <CostPerLeadChart data={trend} />
         </div>
       </section>
 
       <section className="mt-6">
-        <h2 className="mb-4 text-base font-bold text-slate-900">Campaign Breakdown</h2>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-base font-bold text-slate-900">Campaign Breakdown</h2>
+          <a
+            href={reportHref}
+            download
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
+          >
+            <IconDownload className="h-3.5 w-3.5" />
+            Download Monthly Report
+          </a>
+        </div>
         <CampaignTables tables={campaignTables} />
 
         {noDeliveryCampaigns.length > 0 && (
           <p className="mt-4 text-sm text-slate-400">
-            <span className="font-semibold text-slate-500">No delivery this month:</span>{" "}
+            <span className="font-semibold text-slate-500">No delivery this week:</span>{" "}
             {noDeliveryCampaigns.join(", ")}
           </p>
         )}
@@ -94,7 +106,7 @@ export default function DashboardBody({
       <section className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="px-6 py-4" style={{ background: "var(--brand-gradient)" }}>
           <h2 className="text-sm font-bold text-white">
-            Account Total — {monthLabel} (MTD)
+            Account Total — {weekLabel} (WTD)
           </h2>
         </div>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-4 p-6 sm:grid-cols-4">

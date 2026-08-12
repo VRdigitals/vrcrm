@@ -188,6 +188,37 @@ export function currentMonthRange(): { fromDate: string; toDate: string } {
 }
 
 /**
+ * The dashboard's main view is scoped to the current week rather than the
+ * whole month — weeks run Saturday through Friday, and the window only
+ * extends through YESTERDAY (not today), since the daily pull hasn't run
+ * for today yet. On Saturday morning this naturally flips to a fresh,
+ * empty week until the next day's data lands.
+ */
+export function currentWeekRange(): { fromDate: string; toDate: string } {
+  const now = new Date();
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const dow = today.getUTCDay(); // Sun=0 ... Sat=6
+  const daysSinceSaturday = (dow - 6 + 7) % 7;
+
+  const saturday = new Date(today);
+  saturday.setUTCDate(saturday.getUTCDate() - daysSinceSaturday);
+
+  const yesterday = new Date(today);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+
+  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  return { fromDate: fmt(saturday), toDate: fmt(yesterday) };
+}
+
+/** "Saturday's date – yesterday's date" in DD/MM/YY, for the week-view header. */
+export function formatWeekLabel(fromDate: string, toDate: string): string {
+  if (toDate < fromDate) {
+    return `Week of ${formatDateDMY(fromDate)}`;
+  }
+  return `${formatDateDMY(fromDate)} – ${formatDateDMY(toDate)}`;
+}
+
+/**
  * Ad spend currency varies per Meta ad account, so we don't assume USD here —
  * format as a plain decimal and let the UI attach whatever currency label
  * the client's ad account actually uses.

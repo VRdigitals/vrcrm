@@ -11,7 +11,7 @@ export default function CampaignTables({ tables }: { tables: CampaignTable[] }) 
   if (tables.length === 0) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-400 shadow-sm">
-        No campaign data yet for this month.
+        No campaign data yet for this week.
       </div>
     );
   }
