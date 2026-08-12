@@ -1,4 +1,5 @@
 import type { DailyTrendPoint } from "@/lib/metrics";
+import { formatDateDM } from "@/lib/metrics";
 
 const WIDTH = 720;
 const HEIGHT = 260;
@@ -111,7 +112,7 @@ export default function SpendLeadsChart({ data }: { data: DailyTrendPoint[] }) {
               fill="#64748b"
               textAnchor="middle"
             >
-              {d.date.slice(5)}
+              {formatDateDM(d.date)}
             </text>
           ) : null
         )}

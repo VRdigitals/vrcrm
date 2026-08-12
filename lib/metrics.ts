@@ -202,3 +202,13 @@ export function formatCurrency(n: number): string {
 export function formatNumber(n: number): string {
   return new Intl.NumberFormat("en-US").format(Math.round(n));
 }
+
+/** "YYYY-MM-DD" -> "DD/MM/YY" */
+export function formatDateDMY(date: string): string {
+  return `${date.slice(8, 10)}/${date.slice(5, 7)}/${date.slice(2, 4)}`;
+}
+
+/** "YYYY-MM-DD" -> "DD/MM" (compact, for chart axis labels) */
+export function formatDateDM(date: string): string {
+  return `${date.slice(8, 10)}/${date.slice(5, 7)}`;
+}

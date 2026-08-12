@@ -1,5 +1,5 @@
 import type { CampaignTable } from "@/lib/metrics";
-import { formatCurrency, formatNumber } from "@/lib/metrics";
+import { formatCurrency, formatNumber, formatDateDMY } from "@/lib/metrics";
 
 /**
  * Per-campaign day-by-day tables, stacked vertically (the page scrolls
@@ -48,7 +48,7 @@ export default function CampaignTables({ tables }: { tables: CampaignTable[] }) 
                 {table.days.map((d) => (
                   <tr key={d.date} className="border-b border-slate-100">
                     <td className="px-4 py-2.5 text-slate-600">
-                      {d.date.slice(5)}/{d.date.slice(2, 4)}
+                      {formatDateDMY(d.date)}
                     </td>
                     <td className="px-4 py-2.5 text-slate-600">{d.dayName}</td>
                     <td className="px-4 py-2.5 font-medium text-slate-800">
